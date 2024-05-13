@@ -1,0 +1,38 @@
+<html>
+<body>
+<form method="POST" action="http://127.0.0.1:8000/profiles/208" enctype="multipart/form-data">
+        <input type="hidden" name="_token" value="8a5p4NR9BD3nxYzddRhvTvOJSGorAXdtVWYWEgml"> 
+        <input type="hidden" name="_method" value="PUT">        
+	<div class="mb-3">
+            <label class="form-label">Nom Complet</label>
+            <input type="text" name="name" class="form-control" value="taha">
+            
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="text" name="email" class="form-control" value="taha@gmail.com">   
+            
+        </div>    
+        <div class="mb-3">
+            <label class="form-label">Mot de passe</label>
+            <input type="password" name="password" class="form-control">       
+        </div>    
+        <div class="mb-3">
+            <label class="form-label">Confirmation mot de passe</label>
+            <input type="password" name="password_confirmation" class="form-control">       
+        </div>    
+        <div class="mb-3">
+            <label for="formGroupExampleInput2" class="form-label">Description</label>
+            <textarea name="bio" class="form-control">taha taha taha</textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Image</label>
+            <input type="file" name="image" class="form-control">
+        </div>
+        <div class="d-grid my-5 ">
+            <button class="btn btn-primary btn-block" type="submit">Modifier</button>
+        </div>
+    </form>
+</body>
+</html>
+

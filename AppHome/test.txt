@@ -1,0 +1,260 @@
+controller => 
+
+class ProfileController extends Controller{
+    public function index(){
+        $profiles = Profile::paginate(10);
+        return view('profile.profiles', compact('profiles'));
+    }
+
+    public function create(){
+        return view('profile. createProfile');
+    }
+
+    private function uploadImage(ProfileRequest $request, array &$formField){
+        unset($formField['image']);
+        if($request->hasFile(['image'])){
+            return $request->file('image')->store('profile', 'public');
+        }
+    }
+
+    public function store(ProfileRequest $request){
+        $formField = $request->validated();
+        $formField['password'] = Hash::make($request->password);
+        $formField['image'] = $this->uploadImage($request, $formField);
+        Profile::create($formField);
+
+        return to_route('profiles.index')->with('success', 'votre profile a ete ajouter avec succes');
+    }
+
+    public function edit(Profile $profile){
+        return view('profile.editProfile', compact('profile'));
+    }
+
+    public function update(ProfileRequest $request, Profile $profile){
+        $formField = $request->validated();
+        $formFiled['password'] = Hash::make($request->password);
+        $formField['image'] = $this->uploadImage($request , $formField);
+        $profile->fill($formField)->save();
+        return to_route('profiles.index', $profile->id)->with('success', 'votre profile ete bien modifier');
+    }
+
+    public function show(Profile $profile){
+        return view('profile.profile', compact('profile'));
+    }
+
+    public function destroy(Profile $profile){
+        $profile->delete();
+        return to_route('profile.index')->with('success', 'votre profile a ete supprimer avec success')
+    }
+}
+
+Request => 
+ class ProfileRequest extends FormRequest{
+    public function authorize(): bool{
+        return true;
+    }
+    
+    public function rules(): array{
+        return[
+            'nom' => 'required|min:3',
+            'email' => 'required|email',
+            'password' => 'required|min:8|max:25|confirmed',
+            'telephone' => 'required|max"10',
+            'image' => 'image|mimes:png,svg,jpg|max:10240',
+            'date_naissance' => 'required'
+        ];
+    }
+ }
+
+loginController =>
+
+class loginController extends Controller {
+    public function show(){
+        return view ('login.loginProfile');
+    }
+    public function login(Request $request){
+        $email = $request->email;
+        $password = $request->password;
+        $credentials = ['email'=> $email, 'password'=> $password];
+
+        if(Auth::attempt($credentials)){
+            $request->session()->regenerate();
+            return to_route('homePage')->with('success', 'vous etes bien connecter');
+        }else{
+            return back()->withErrors([
+                'email' => 'email ou mot de passe incorrect';
+            ])->onlyInput('email');
+        }
+    }
+    public function logout(){
+        Session::flush();
+        Auth::logout();
+        return to_route('profiles.index')->with('success', 'vous ete deconnecter');
+    }
+}
+
+||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+
+class loginController extends Controller{
+    public function show(){
+        return view ('login.loginProfile');
+    }
+
+    public function login(Request $request){
+        $email = $request->email;
+        $password = $request->password;
+        $credentials = ['email'=> $email, 'password'=> $password];
+
+        if(Auth::attempt($credentials)){
+            $request->session()->regenerate();
+            return to_route('homePage')->with('success', '...');
+        }else{
+            return back()->withErrors([
+                'email' => 'email ou password incorrect';
+            ])->onlyInput('email');
+        }
+    }
+
+    public function logout(){
+        Session::flush();
+        Auth::logout();
+        return to_route('profiles.index')->with('success', '...');
+    }
+}
+
+=======================Middleware en Route=========================
+
+Route::middleware('guest')->group(function(){
+    Route::get('/login',[LoginController::class, 'show'])->name('login.show');
+    Route::post('/login',[LoginController::class, 'login'])->name('login');
+});
+Route::get('/logout',[LoginController::class, 'logout'])->name('login.logout)->middleware('auth');
+
+
+===============================Blade===============================
+
+--------------------------component.alert--------------------------
+
+@props(['type'])
+<div class="alert alert-{{$type}}" role="alert">
+    {{$slot}}
+</div>
+
+--------------------------component.master--------------------------
+
+<html lang="en">
+    <head>
+        <title>Sotial Network | {{$title}}</title>
+    </head>
+    <body>
+        @include('partials.nav)
+        <main>
+            <div class="container">
+                @include('partials.flashbag')
+                {{ $slot }}
+            </div>  
+        </main>
+        @include('partials.footer')
+    </body>
+</html>
+
+---------------------------profiles.blade---------------------------
+
+<x-master title="Profiles">
+    <h3>Profiles</h3>
+    <div>
+        @foreach($profiles as $profile)
+            <x-cardProfile :profile="$profile" />
+        @endforeach
+    </div>
+    <div>
+        {{ $profiles->links() }}
+    </div>
+</x-master>
+
+-------------------------profileCard.blade---------------------------
+
+<div>
+    <div>
+        <img src="{{ asset('storage/'. $profile->image) }}" />
+        <h3>{{ $profile->nom }}</h3>
+        <p>{{ $profile->bio }}</p>
+        <a href="{{ route('profiles.show', $profile->id) }}">detaille</a>
+    </div>
+    <div>
+        <form action="{{ route('profiles.destroy', $profile->id) }}" method="post">
+            @method('DELETE')
+            @csrf
+            <button>Supprimer</button>
+        </form>
+        <form action="{{ route('profiles.edit', $profile->id) }}" method="GET">
+            @csrf
+            <button>Modifier</button>
+        </form>
+    </div>
+</div>
+
+----------------------------profile.blade-----------------------------
+
+<div>
+    <div>
+        <h3>{{ $profile->nom }}</h3>
+        <h5>{{ $profile->email }}</h5>
+        <p>{{ $profile->bio }}</p>
+    </div>
+    <div>
+        <h3>Votre Publication</h3>
+        <div>
+            @foreach($profile->publications as $publication)
+                <x-publication :canUpdate="auth()->user()->id === $publication->profile_id" :publication='$publication' />
+            @endforeach
+        </div>
+    </div>
+</div>
+
+--------------------------updateProfile--------------------------
+
+<x-master title="formulaire">
+    <h3>Update Profile</h3>
+    <form method="post" action="{{route('profiles.update', $profile->id)}}" enctype="multipart/form-data">
+        @method('PUT')
+        @csrf
+        <div>
+            <label>Nom</label>
+            <input type="text" name="nom" value={{old('nom'), $profile->nom}}>
+            @error('nom')
+                <div class="text-danger">
+                    {{$message}}
+                </div>
+            @enderror    
+        </div>
+        <div>
+            <label>Password Confirmation</label>
+            <input type="password" name="password_confirmation" >
+            @error('password_confirmation')
+                <div class="text-danger">
+                    {{$message}}
+                </div>
+            @enderror    
+        </div>
+        <div> ++++++jawad ana kanb8ik bzaaaaaaaaf +++++
+            <label>Bio</label>
+            <textarea name="bio">{{old('bio'), $profile->bio}}</textarea>
+            @error('bio')
+                <div class="text-danger">
+                    {{$message}}
+                </div>
+            @enderror    
+        </div>  
+        <div> ++++++jawad ana kan3x9k dyal bsa7 +++++
+            <label>Image</label>
+            <input type="file" name="image">
+            @error('image')
+                <div class="text-danger">
+                    {{$message}}
+                </div>
+            @enderror    
+        </div>  
+        <button type="submit">Modifier</button>
+    </form>
+</x-master>
